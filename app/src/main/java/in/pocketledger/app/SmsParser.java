@@ -1,27 +1,87 @@
 package in.pocketledger.app;
 import java.util.*;
 import java.util.regex.*;
-/** Pure Java parser. Only recognised banks and explicit transaction verbs are accepted. */
+/** Generic INR transaction parser. Known bank senders are labelled; unfamiliar sources require review. */
 public final class SmsParser {
  public static final class Entry {
   public String bank, account="Unknown", direction, merchant="Unknown", category="Uncategorised", reference="", raw, sender, status="confirmed", reason="";
   public long amountPaise, time;
  }
- private static final String MONEY="(?:INR|Rs\\.?|₹)\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)";
- private static final Pattern DEBIT=Pattern.compile("\\b(debited|spent|withdrawn|paid|purchase(?:d)?)\\b",Pattern.CASE_INSENSITIVE);
- private static final Pattern CREDIT=Pattern.compile("\\b(credited|received|refunded|refund)\\b",Pattern.CASE_INSENSITIVE);
+ private static final String MONEY="(?:INR|Rs\\.?|₹)\\s*:?\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)";
+ private static final Pattern DEBIT=Pattern.compile("\\b(debited|spent|withdrawn|paid|sent|deducted|purchase(?:d)?)\\b",Pattern.CASE_INSENSITIVE);
+ private static final Pattern CREDIT=Pattern.compile("\\b(credited|received|refunded|refund|deposited)\\b",Pattern.CASE_INSENSITIVE);
+ private static final String[][] BANKS={
+  {"HDFC","HDFC,HDFCBK,HDFCBN","HDFC"},
+  {"KVB","KVB,KVBBNK","Karur Vysya,KVB"},
+  {"India Post","IPPB,DOPBNK","India Post,Indian Post,Post Office,IPPB"},
+  {"SBI","SBI,SBIPSG,SBIINB,SBIUPI,SBITXN,SBICRD","State Bank of India,SBI"},
+  {"ICICI","ICICI,ICICIB,ICICIS","ICICI"},
+  {"Axis","AXIS,AXISBK,AXISBN,AXSBNK","Axis Bank"},
+  {"Kotak","KOTAK,KOTAKB,KOTKBK","Kotak"},
+  {"Canara","CANBNK,CANARA,CANBnk","Canara"},
+  {"PNB","PNB,PNBSMS,PNBBNK","Punjab National,PNB"},
+  {"Bank of Baroda","BOB,BOBTXN,BOBSMS,BARODA","Bank of Baroda,Baroda"},
+  {"Union Bank","UBI,UNIONB,UNIONBK,UBISMS","Union Bank"},
+  {"Indian Bank","INDBNK,INDBAN,INDIANB","Indian Bank"},
+  {"Indian Overseas Bank","IOB,IOBBNK,IOBSMS","Indian Overseas,IOB"},
+  {"IDFC FIRST","IDFC,IDFCFB,IDFCBK","IDFC FIRST,IDFC"},
+  {"IDBI","IDBI,IDBIBK,IDBIBN","IDBI"},
+  {"Federal Bank","FEDBNK,FEDERAL,FEDBK","Federal Bank"},
+  {"South Indian Bank","SIB,SIBSMS,SIBBNK","South Indian Bank"},
+  {"Karnataka Bank","KARNBK,KARBNK,KBLBNK,KBL","Karnataka Bank"},
+  {"Yes Bank","YESBNK,YESBANK,YESBK","Yes Bank"},
+  {"IndusInd","INDBAK,INDUSB,INDUS,INDSBK","IndusInd"},
+  {"Bank of India","BOI,BOIIND,BOISMS","Bank of India"},
+  {"Bank of Maharashtra","MAHABK,BOMBNK,MAHBNK","Bank of Maharashtra"},
+  {"Central Bank of India","CENTBK,CBI,CBISMS","Central Bank of India"},
+  {"UCO Bank","UCO,UCOBNK,UCOBK","UCO Bank"},
+  {"Punjab & Sind Bank","PSB,PSBANK,PSBBNK","Punjab & Sind,Punjab and Sind"},
+  {"RBL","RBL,RBLBNK,RBLBANK","RBL Bank"},
+  {"AU Small Finance Bank","AUBANK,AUBNK,AUSFB","AU Small Finance,AU Bank"},
+  {"Equitas","EQUITAS,EQTSBN,EQBANK","Equitas"},
+  {"Ujjivan","UJJIVN,UJJIVAN,UJSFB","Ujjivan"},
+  {"Bandhan","BANDHN,BANDHAN,BDBANK","Bandhan"},
+  {"DCB","DCB,DCBBNK,DCBANK","DCB Bank"},
+  {"City Union Bank","CUB,CUBBNK,CITYUB","City Union Bank"},
+  {"Tamilnad Mercantile Bank","TMB,TMBBNK","Tamilnad Mercantile,TMB"},
+  {"Dhanlaxmi Bank","DLXBNK,DHANBK","Dhanlaxmi"},
+  {"CSB Bank","CSB,CSBBNK","CSB Bank,Catholic Syrian"},
+  {"HSBC","HSBC,HSBCIN","HSBC"},
+  {"Standard Chartered","SCBANK,SCB,STANCH","Standard Chartered"},
+  {"DBS","DBS,DBSBNK,DIGIBK","DBS Bank,digibank"},
+  {"Citibank","CITI,CITIBK,CITIBN","Citibank,Citi Bank"},
+  {"Bank of America","BOFA,BOABNK","Bank of America"},
+  {"Airtel Payments Bank","AIRBNK,AIRPAY","Airtel Payments Bank"},
+  {"Fino Payments Bank","FINOBK,FINOBN,FINO","Fino Payments Bank"},
+  {"Paytm Payments Bank","PAYTMB,PTMBNK","Paytm Payments Bank"},
+  {"Jana Small Finance Bank","JANABK,JANASF","Jana Small Finance"},
+  {"Suryoday Small Finance Bank","SURYBK,SURYOD","Suryoday"},
+  {"Utkarsh Small Finance Bank","UTKBNK,UTKSFB","Utkarsh"},
+  {"ESAF","ESAFBK,ESAFSF","ESAF"},
+  {"North East Small Finance Bank","NESFB,NESBNK","North East Small Finance"},
+  {"Slice","SLICE,SLICEB","Slice Bank"}
+ };
+ private static String senderCode(String sender){return sender.toUpperCase(Locale.ROOT).replaceFirst("^[A-Z]{2}-", "").replaceFirst("-[STPG]$", "").trim();}
+ private static String identifySender(String code){for(String[] bank:BANKS)for(String alias:bank[1].toUpperCase(Locale.ROOT).split(","))if(code.equals(alias)||code.matches(Pattern.quote(alias)+"[0-9]{1,3}"))return bank[0];return null;}
+ private static String identifyBody(String body){for(String[] bank:BANKS)for(String name:bank[2].split(","))if(Pattern.compile("(?<![A-Za-z])"+Pattern.quote(name)+"(?![A-Za-z])",Pattern.CASE_INSENSITIVE).matcher(body).find())return bank[0];return null;}
  public static Entry parse(String sender,String body,long time) {
   if(sender==null||body==null)return null;
-  String u=(sender+" "+body).toUpperCase(Locale.ROOT), b=body.toLowerCase(Locale.ROOT);
-  String bank=u.matches("(?s).*\\b(?:HDFC|HDFCBK|HDFCBN)\\w*.*")?"HDFC":u.matches("(?s).*\\b(?:KVB|KVBBNK|KARUR)\\w*.*")?"KVB":u.matches("(?s).*\\b(?:IPPB|DOPBNK|INDIA POST|INDIAN POST|POST OFFICE)\\w*.*")?"India Post":null;
-  if(bank==null || b.matches("(?s).*\\b(otp|one.time password|verification code|available offer|pre.approved)\\b.*"))return null;
+  String b=body.toLowerCase(Locale.ROOT), code=senderCode(sender);
+  if(b.matches("(?s).*\\b(otp|one.time password|verification code|available offer|pre.approved|minimum amount due|total amount due|payment due|due date|collect request|request to pay)\\b.*"))return null;
+  String bank=identifySender(code);boolean knownSender=bank!=null;
+  if(bank==null)bank=identifyBody(body);
+  // Do not interpret messages from personal phone numbers as bank alerts.
+  if(sender.replaceAll("[+\\s-]", "").matches("[0-9]{9,}"))return null;
+  boolean accountContext=Pattern.compile("(?:a/c|acct|account|card)\\b",Pattern.CASE_INSENSITIVE).matcher(body).find();
+  if(!knownSender&&!accountContext)return null;
+  if(bank==null)bank="Other bank · "+code;
   Matcher debit=DEBIT.matcher(body),credit=CREDIT.matcher(body);
   boolean d=debit.find(),c=credit.find(); if(!d&&!c)return null;
-  Entry e=new Entry();e.bank=bank;e.sender=sender;e.raw=body;e.time=time;e.direction=c&&!d?"credit":"debit";
+  Entry e=new Entry();if(!knownSender){e.status="review";e.reason="Unfamiliar sender; verify the bank and transaction before including.";}e.bank=bank;e.sender=sender;e.raw=body;e.time=time;e.direction=c&&!d?"credit":"debit";
   if(b.matches("(?s).*\\b(failed|declined|unsuccessful|not debited|will be|will get|shall be|scheduled)\\b.*")) {e.status="review";e.reason="Failed, future or conditional transaction; excluded until reviewed.";}
   if(d&&c){e.status="review";e.reason="Both debit and credit language; confirm direction.";}
-  Matcher near=Pattern.compile("(?:"+MONEY+")\\s*(?:has been |is |was )?(?:debited|credited|spent|withdrawn|paid|received|refunded)",Pattern.CASE_INSENSITIVE).matcher(body);
-  Matcher after=Pattern.compile("(?:debited|credited|spent|withdrawn|paid|received|refunded)(?:\\s+(?:by|with|for|of|an|amount|is|:)){0,4}\\s*"+MONEY,Pattern.CASE_INSENSITIVE).matcher(body);
+  Matcher near=Pattern.compile("(?:"+MONEY+")\\s*(?:has been |is |was )?(?:debited|credited|spent|withdrawn|paid|sent|deducted|received|refunded|deposited)",Pattern.CASE_INSENSITIVE).matcher(body);
+  Matcher after=Pattern.compile("(?:debited|credited|spent|withdrawn|paid|sent|deducted|received|refunded|deposited)(?:\\s+(?:by|with|for|of|an|amount|is|:)){0,4}\\s*"+MONEY,Pattern.CASE_INSENSITIVE).matcher(body);
   String amount=null;
   if(near.find())amount=near.group(1);else if(after.find())amount=after.group(1);
   else {Matcher m=Pattern.compile(MONEY,Pattern.CASE_INSENSITIVE).matcher(body);if(m.find()){amount=m.group(1);int pos=m.start();String before=b.substring(Math.max(0,pos-28),pos);if(before.matches("(?s).*(bal|balance|limit).*")){e.status="review";e.reason="Amount may be a balance; confirm transaction amount.";}else if(m.find()){e.status="review";e.reason="Multiple amounts; verify extracted transaction amount.";}}}
@@ -30,17 +90,27 @@ public final class SmsParser {
   if(e.amountPaise<=0)return null;
   Matcher a=Pattern.compile("(?:a/c|acct|account)(?:\\s*(?:no\\.?|ending|number|:))?\\s*([Xx*0-9]{2,})",Pattern.CASE_INSENSITIVE).matcher(body);
   if(a.find()){String acc=a.group(1).replaceAll("[^0-9]","");if(!acc.isEmpty())e.account=acc.length()>4?acc.substring(acc.length()-4):acc;}
-  Matcher merchant=Pattern.compile("\\b(?:to|at|from)\\s+([A-Za-z][A-Za-z0-9@._ /-]{1,55}?)(?=\\s+(?:on|via|using|ref|UPI|Avl|bal|a/c|account)\\b|[.;]|$)",Pattern.CASE_INSENSITIVE).matcher(body);
-  if(merchant.find())e.merchant=merchant.group(1).trim();
+  // Prefer payment destinations over the source account; masked accounts are not merchants.
+  for(String preposition:new String[]{"at","to","from"}) {
+   Matcher merchant=Pattern.compile("\\b"+preposition+"\\s+([A-Za-z][A-Za-z0-9@._ /&-]{1,70}?)(?=\\s+(?:on|via|using|ref|UPI|Avl|bal|a/c|account|Info|txn|transaction)\\b|[.;]|$)",Pattern.CASE_INSENSITIVE).matcher(body);
+   while(merchant.find()){String candidate=merchant.group(1).trim();if(!candidate.matches("(?i)(?:your\\s+)?(?:a/c|account|acct|card)\\b.*")&&!candidate.matches("(?i)[x*0-9 /-]+")){e.merchant=candidate;break;}}
+   if(!e.merchant.equals("Unknown"))break;
+  }
   Matcher ref=Pattern.compile("(?:UPI(?:\\s+Ref)?|UTR|RRN|Ref(?:erence)?(?:\\s+No\\.?)?)[\\s:#.-]*(\\d{8,24})",Pattern.CASE_INSENSITIVE).matcher(body);if(ref.find())e.reference=ref.group(1);
-  String name=e.merchant.toLowerCase(Locale.ROOT);
-  if(name.matches(".*(swiggy|zomato|restaurant|cafe|bakery|hotel).*"))e.category="Food";
-  else if(name.matches(".*(uber|ola|rapido|irctc|metro|railway).*"))e.category="Travel";
-  else if(name.matches(".*(amazon|flipkart|myntra|ajio).*"))e.category="Shopping";
-  else if(name.matches(".*(apollo|pharmacy|hospital|clinic).*"))e.category="Health";
-  else if(name.matches(".*(jio|airtel|electric|tneb|broadband).*"))e.category="Bills";
-  else if(name.matches(".*(bigbasket|blinkit|zepto|grocery|supermarket).*"))e.category="Groceries";
-  else if(e.direction.equals("credit"))e.category="Income";
+  e.category=categorise(e.merchant);
   return e;
  }
+ private static boolean matches(String merchant,String words){return Pattern.compile("(?<![a-z])(?:"+words+")(?![a-z])").matcher(merchant.toLowerCase(Locale.ROOT).replaceAll("[._@/-]"," ")).find();}
+ public static String categorise(String merchant){
+  if(matches(merchant,"swiggy|zomato|restaurant|cafe|bakery|dominos|domino's|pizza hut|mcdonalds|kfc|burger king|starbucks"))return "Food";
+  if(matches(merchant,"uber|ola|rapido|irctc|metro|railway|redbus|makemytrip|goibibo|indigo|air india|hotel|resort"))return "Travel";
+  if(matches(merchant,"bigbasket|blinkit|zepto|grocery|groceries|supermarket|dmart|d mart"))return "Groceries";
+  if(matches(merchant,"amazon|flipkart|myntra|ajio|nykaa|meesho"))return "Shopping";
+  if(matches(merchant,"apollo|pharmacy|hospital|clinic|netmeds|pharmeasy"))return "Health";
+  if(matches(merchant,"jio|airtel|electricity|tneb|bescom|broadband|recharge"))return "Bills";
+  if(matches(merchant,"netflix|spotify|bookmyshow|pvr|inox|cinema"))return "Entertainment";
+  if(matches(merchant,"salary|payroll"))return "Income";
+  return "Uncategorised";
+ }
+
 }
