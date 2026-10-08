@@ -59,3 +59,5 @@ document.querySelectorAll('.chartControls').forEach(group=>{Array.from(group.chi
 
 $('search').oninput=()=>{limit=100;renderTransactions();clearTimeout(searchLookupTimer);const query=$('search').value.trim();$('lookupState').textContent=query.length>=3?'Checking known merchant categories…':'';if(query.length>=3)searchLookupTimer=setTimeout(()=>native('lookupSearch',query),900);};
 $('retag').onclick=()=>native('repairCategories');$('saveGoogleKey').onclick=()=>{native('saveGoogleKey',$('googleKey').value);$('googleKey').value='';};
+
+$('cleanAlerts').onclick=()=>native('cleanNonBankAlerts');
