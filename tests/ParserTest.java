@@ -51,5 +51,7 @@ public class ParserTest {
 
   check(SmsParser.parse("VM-HDFCBK","INR 200 credited to account XX1234. To stop marketing messages unsubscribe.",1)!=null,"Genuine bank credit with marketing footer retained");
 
+  var full=SmsParser.parse("VM-NEWBNK","Account 123456789012 credited INR 500 via NEFT Ref 123456789012.",1);check(full!=null&&full.status.equals("review"),"Unlisted bank full account number plus NEFT retained for review");
+
  }
 }

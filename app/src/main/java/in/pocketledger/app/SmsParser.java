@@ -69,7 +69,7 @@ public final class SmsParser {
  private static String identifyBody(String body){for(int i=0;i<BANKS.length;i++)if(BANK_NAMES.get(i).matcher(body).find())return BANKS[i][0];return null;}
  private static final Pattern MONEY_PATTERN=Pattern.compile(MONEY,Pattern.CASE_INSENSITIVE);
  private static final Pattern PROMOTIONAL=Pattern.compile("\\b(?:unsubscribe|reminder\\s*to\\s*re\\s*order|remindertoreorder|reorder|shophealthy|shophealthyin|coupon|promo\\s*code|offer\\s*code|discount\\s*code|claim\\s*(?:now|reward)|redeem\\s*(?:now|reward|points))\\b",Pattern.CASE_INSENSITIVE);
- private static final Pattern ACCOUNT_NUMBER=Pattern.compile("(?:a/c|acct|account|card)\\s*(?:(?:no\\.?|number|ending|ending\\s+with|:)[ \\t]*)?(?:[xX*]+[0-9]{2,}|[0-9]{2,8}\\b)",Pattern.CASE_INSENSITIVE);
+ private static final Pattern ACCOUNT_NUMBER=Pattern.compile("(?:a/c|acct|account|card)\\s*(?:(?:no\\.?|number|ending|ending\\s+with|:)[ \\t]*)?(?:[xX*]+[0-9]{2,}|[0-9]{2,20}\\b)",Pattern.CASE_INSENSITIVE);
  private static final Pattern BANK_MARKER=Pattern.compile("\\b(?:bank|neft|imps|rtgs|upi|utr|rrn|atm|pos)\\b|a/c|\\bacct\\b",Pattern.CASE_INSENSITIVE);
  /** Reject non-bank alerts before extracting a value, and reuse for cleaning historical false matches. */
  public static String rejectionReason(String sender,String body){
