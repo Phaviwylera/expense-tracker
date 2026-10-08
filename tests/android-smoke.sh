@@ -5,12 +5,18 @@ adb install -r -g app/build/outputs/apk/debug/app-debug.apk
 adb logcat -c
 adb shell am start -W -n in.pocketledger.app/.MainActivity | tee smoke-output/launch.txt
 sleep 8
-adb shell pidof in.pocketledger.app | tee smoke-output/pid.txt
+app_pid=$(adb shell pidof in.pocketledger.app | tr -d '\r')
+echo "$app_pid" | tee smoke-output/pid.txt
+adb forward tcp:9222 "localabstract:webview_devtools_remote_$app_pid"
+node tests/browser-smoke.cjs
 adb exec-out screencap -p > smoke-output/dashboard.png
 adb logcat -d > smoke-output/logcat.txt
-if rg -q 'FATAL EXCEPTION|Unable to start activity|Process: in.pocketledger.app.*FATAL' smoke-output/logcat.txt; then
-  echo 'Android launch crash detected'; exit 1
-fi
-if rg -qi 'Uncaught (ReferenceError|TypeError|SyntaxError)|Refused to (load|execute).*script' smoke-output/logcat.txt; then
-  echo 'Web dashboard initialization error detected'; exit 1
-fi
+python3 - <<'PY'
+from pathlib import Path
+import re
+s=Path('smoke-output/logcat.txt').read_text(errors='replace')
+errors=re.findall(r'.*(?:FATAL EXCEPTION|Unable to start activity|Uncaught (?:ReferenceError|TypeError|SyntaxError)|Refused to (?:load|execute).*script).*',s)
+if errors:
+ print('\n'.join(errors));raise SystemExit('Android or dashboard initialization failed')
+print('No Android crashes or JavaScript initialization errors.')
+PY
