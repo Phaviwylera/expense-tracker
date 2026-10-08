@@ -68,9 +68,9 @@ public final class SmsParser {
  private static String identifySender(String code){String bank=SENDERS.get(code);return bank!=null?bank:SENDERS.get(code.replaceFirst("[0-9]{1,3}$",""));}
  private static String identifyBody(String body){for(int i=0;i<BANKS.length;i++)if(BANK_NAMES.get(i).matcher(body).find())return BANKS[i][0];return null;}
  private static final Pattern MONEY_PATTERN=Pattern.compile(MONEY,Pattern.CASE_INSENSITIVE);
- private static final Pattern PROMOTIONAL=Pattern.compile("\\b(?:unsubscribe|reminder\\s*to\\s*re\\s*order|remindertoreorder|reorder|shophealthy|shophealthyin|coupon|promo\\s*code|offer\\s*code|discount\\s*code|claim\\s*(?:now|reward)|redeem\\s*(?:now|reward|points))\\b",Pattern.CASE_INSENSITIVE);
+ private static final Pattern PROMOTIONAL=Pattern.compile("\\b(?:unsubscribe|order\\s*reminder|reward\\s+now|reminder\\s*to\\s*re\\s*order|remindertoreorder|reorder|shophealthy|shophealthyin|coupon|promo\\s*code|offer\\s*code|discount\\s*code|claim\\s*(?:now|reward)|redeem\\s*(?:now|reward|points))\\b",Pattern.CASE_INSENSITIVE);
  private static final Pattern ACCOUNT_NUMBER=Pattern.compile("(?:a/c|acct|account|card)\\s*(?:(?:no\\.?|number|ending|ending\\s+with|:)[ \\t]*)?(?:[xX*]+[0-9]{2,}|[0-9]{2,20}\\b)",Pattern.CASE_INSENSITIVE);
- private static final Pattern BANK_MARKER=Pattern.compile("\\b(?:bank|neft|imps|rtgs|upi|utr|rrn|atm|pos)\\b|a/c|\\bacct\\b",Pattern.CASE_INSENSITIVE);
+ private static final Pattern BANK_MARKER=Pattern.compile("\\b(?:bank|neft|imps|rtgs|upi|utr|rrn|atm|pos)\\b",Pattern.CASE_INSENSITIVE);
  /** Reject non-bank alerts before extracting a value, and reuse for cleaning historical false matches. */
  public static String rejectionReason(String sender,String body){
   if(sender==null||body==null)return "Missing SMS source";String code=senderCode(sender);boolean known=identifySender(code)!=null;
@@ -81,8 +81,11 @@ public final class SmsParser {
   if(!known){
    if(!categorise(code).equals("Uncategorised")||code.matches("(?i)(?:SHPHLT|SHOPHLT|SHOPHEALTHY|AMAZON|FLPKRT|SWIGGY|ZOMATO)[0-9]*"))return "Merchant notification; not a bank alert";
    if(!account)return "No bank account or card transaction evidence";
-   boolean masked=Pattern.compile("[xX*]+[0-9]{2,}").matcher(body).find();
-   if(!masked&&!BANK_MARKER.matcher(body).find()&&identifyBody(body)==null&&!code.matches(".*(?:BNK|BANK).*"))return "Unfamiliar source without banking context";
+   boolean masked=Pattern.compile("(?:a/c|acct|account|card)\\s*(?:(?:no\\.?|number|ending|ending\\s+with|:)[ \\t]*)?[xX*]+[0-9]{2,}",Pattern.CASE_INSENSITIVE).matcher(body).find();
+   boolean banking=BANK_MARKER.matcher(body).find()||identifyBody(body)!=null;
+   boolean movement=Pattern.compile("\\b(?:debited|credited|withdrawn|spent|paid|sent|deducted|deposited|refunded)\\b",Pattern.CASE_INSENSITIVE).matcher(body).find();
+   boolean receivedTransfer=Pattern.compile("\\breceived\\b",Pattern.CASE_INSENSITIVE).matcher(body).find()&&Pattern.compile("\\b(?:neft|imps|rtgs|upi)\\b",Pattern.CASE_INSENSITIVE).matcher(body).find()&&Pattern.compile("\\b(?:ref(?:erence)?|utr|rrn)[:.\\s/-]*[A-Za-z0-9]{6,}",Pattern.CASE_INSENSITIVE).matcher(body).find();
+   if(!(movement&&(masked||banking)||receivedTransfer))return "Unfamiliar source without bank transaction evidence";
   }
   return "";
  }

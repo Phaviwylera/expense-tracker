@@ -95,3 +95,7 @@ CI also installs a dedicated native test APK. Its temporary ledger-regression-on
 A generic account/card word plus credited/received is no longer enough to accept an unfamiliar source. Require an identifiable account/card number with masked details, a banking payment marker, a bank name or a bank-like sender. Merchant sender messages, gift-card/wallet/loyalty rewards and promotional reorder/coupon notifications are rejected. Real bank debits to Swiggy remain Food; genuine cashback credited to a bank account remains a credit. Bank transaction alerts with marketing footers remain accepted when they have clear account/movement evidence.
 
 Database upgrade cleans previously imported explicit merchant/promotion false matches and unsupported unverified entries. Confirmed manual entries with merely insufficient evidence are preserved. A Settings cleanup button repeats the check. This changes only the tracker database; phone SMS are never deleted. Regression tests reproduce the reward and reorder patterns with personal identifiers replaced, and test native database cleanup alongside genuine bank entry retention.
+
+### Version 1.5: account labels are not banking proof
+
+Order reminders and reward promotions are rejected. Unfamiliar senders require an explicit financial movement plus a masked account or banking context; received messages require a transfer rail and reference. An A/C label and amount alone cannot import a message. Upgrading schema 4 removes previous review entries failing these rules, while preserving manual tags on retained transactions.
