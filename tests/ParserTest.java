@@ -53,5 +53,12 @@ public class ParserTest {
 
   var full=SmsParser.parse("VM-NEWBNK","Account 123456789012 credited INR 500 via NEFT Ref 123456789012.",1);check(full!=null&&full.status.equals("review"),"Unlisted bank full account number plus NEFT retained for review");
 
+  check(SmsParser.parse("VM-VAANAM","ORDER REMINDER: ID#123 on A/C 9999999999 delivered! And you received Rs.7,232 reward now. Cust Ph View details: example.com/test",1)==null,"Order reward with phone labelled A/C excluded");
+  check(SmsParser.parse("VM-OTHER","A/C 9999999999 received Rs.7232. View details example.com/test",1)==null,"Account label and received alone insufficient");
+  check(SmsParser.parse("VM-OTHER","Account XX1234 received INR 500",1)==null,"Masked account alone cannot prove received is a bank transfer");
+  check(SmsParser.parse("VM-OTHER","A/C 9999999999 credited Rs.7232",1)==null,"Credit word plus unmasked account alone insufficient for unfamiliar source");
+  check(SmsParser.parse("VM-OTHER","Account XX1234 credited INR 500",1)!=null,"Masked account explicit credit retained for review");
+  check(SmsParser.parse("VM-OTHER","Account 123456789012 received INR 500 via NEFT UTR ABC123456789",1)!=null,"Received transfer with NEFT reference retained for review");
+
  }
 }

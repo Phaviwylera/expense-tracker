@@ -2,6 +2,6 @@ plugins { id 'com.android.application' }
 android {
     namespace 'in.pocketledger.app'
     compileSdk 35
-    defaultConfig { applicationId 'in.pocketledger.app'; minSdk 26; targetSdk 35; versionCode 5; versionName '1.4'; testInstrumentationRunner 'in.pocketledger.app.LedgerInstrumentation' }
+    defaultConfig { applicationId 'in.pocketledger.app'; minSdk 26; targetSdk 35; versionCode 6; versionName '1.5'; testInstrumentationRunner 'in.pocketledger.app.LedgerInstrumentation' }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
