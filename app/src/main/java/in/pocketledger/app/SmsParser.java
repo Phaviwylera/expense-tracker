@@ -61,11 +61,11 @@ public final class SmsParser {
   {"North East Small Finance Bank","NESFB,NESBNK","North East Small Finance"},
   {"Slice","SLICE,SLICEB","Slice Bank"}
  };
- private static String senderCode(String sender){return sender.toUpperCase(Locale.ROOT).replaceFirst("^[A-Z]{2}-", "").replaceFirst("-[STPG]$", "").trim();}
+ public static String senderCode(String sender){return sender.toUpperCase(Locale.ROOT).replaceFirst("^[A-Z]{2}-", "").replaceFirst("-[STPG]$", "").trim();}
  private static final Map<String,String> SENDERS=new HashMap<>();
  private static final List<Pattern> BANK_NAMES=new ArrayList<>();
  static{for(String[] bank:BANKS){for(String alias:bank[1].toUpperCase(Locale.ROOT).split(","))SENDERS.put(alias,bank[0]);StringJoiner names=new StringJoiner("|");for(String name:bank[2].split(","))names.add(Pattern.quote(name));BANK_NAMES.add(Pattern.compile("(?<![A-Za-z])(?:"+names+")(?![A-Za-z])",Pattern.CASE_INSENSITIVE));}}
- private static String identifySender(String code){String bank=SENDERS.get(code);return bank!=null?bank:SENDERS.get(code.replaceFirst("[0-9]{1,3}$",""));}
+ public static String identifySender(String code){String bank=SENDERS.get(code);return bank!=null?bank:SENDERS.get(code.replaceFirst("[0-9]{1,3}$",""));}
  private static String identifyBody(String body){for(int i=0;i<BANKS.length;i++)if(BANK_NAMES.get(i).matcher(body).find())return BANKS[i][0];return null;}
  private static final Pattern MONEY_PATTERN=Pattern.compile(MONEY,Pattern.CASE_INSENSITIVE);
  private static final Pattern PROMOTIONAL=Pattern.compile("\\b(?:unsubscribe|order\\s*reminder|reward\\s+now|reminder\\s*to\\s*re\\s*order|remindertoreorder|reorder|shophealthy|shophealthyin|coupon|promo\\s*code|offer\\s*code|discount\\s*code|claim\\s*(?:now|reward)|redeem\\s*(?:now|reward|points))\\b",Pattern.CASE_INSENSITIVE);

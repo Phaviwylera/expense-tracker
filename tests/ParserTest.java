@@ -60,5 +60,12 @@ public class ParserTest {
   check(SmsParser.parse("VM-OTHER","Account XX1234 credited INR 500",1)!=null,"Masked account explicit credit retained for review");
   check(SmsParser.parse("VM-OTHER","Account 123456789012 received INR 500 via NEFT UTR ABC123456789",1)!=null,"Received transfer with NEFT reference retained for review");
 
+  var balance=in.pocketledger.app.BalanceParser.parse("VM-HDFCBK","Rs.200 debited from A/c XX1234 to SWIGGY. Avl Bal Rs.12,345.67",123);check(balance!=null&&balance.amount==1234567&&balance.account.equals("1234")&&balance.time==123,"Reported balance not confused with expense amount");
+  check(in.pocketledger.app.BalanceParser.parse("VM-KVB","Your account XX1111 available balance is INR 0.00",1).amount==0,"Zero account balance retained");
+  check(in.pocketledger.app.BalanceParser.parse("VM-IPPB","A/C XX4321 credited Rs.50. AvlBal: INR 5,000.00",1).amount==500000,"Compact AvlBal parsed for India Post");
+  check(in.pocketledger.app.BalanceParser.parse("VM-SWIGGY","Your account XX1234 balance Rs.200",1)==null,"Merchant wallet not treated as bank balance");
+  check(in.pocketledger.app.BalanceParser.parse("VM-HDFCBK","Credit card XX1234 available credit balance Rs.20000",1)==null,"Credit limit is not deposit balance");
+  check(in.pocketledger.app.BalanceParser.parse("VM-HDFCBK","Account XX1234 balance Rs.200; balance Rs.500",1)==null,"Ambiguous multiple balances rejected");
+
  }
 }

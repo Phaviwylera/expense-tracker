@@ -16,13 +16,15 @@ const deadline=setTimeout(()=>{console.error('WebView test timed out');process.e
  assert.equal(await evaluate("document.getElementById('expense').textContent.replace(/\\s/g,'')"),'₹500.00');
  assert.equal(await evaluate("document.getElementById('legend').children.length"),1);
  assert.equal(await evaluate("Array.from(document.getElementById('bank').options).some(o=>o.value==='SBI')"),true);
+ const shot=await new Promise(resolve=>{const n=++id;pending.set(n,resolve);ws.send(JSON.stringify({id:n,method:'Page.captureScreenshot',params:{format:'png'}}));});fs.writeFileSync('smoke-output/premium-overview.png',Buffer.from(shot.result.data,'base64'));
+ assert.equal(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),true);
  await evaluate("edit(state.transactions[0])");
  assert.equal(await evaluate("document.getElementById('editBank').value"),'SBI');
  await evaluate("document.getElementById('editDialog').close()");
  assert.equal(await evaluate("trendPoints.length>0"),true);
  await evaluate("document.getElementById('trendMode').value='cumulative';document.getElementById('trendMode').onchange()");
  await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
- assert.equal(await evaluate("document.getElementById('trendSubtitle').textContent"),'Cumulative outflow · selected period');
+ assert.equal(await evaluate("document.getElementById('trendSubtitle').textContent"),'Cumulative outflow · daily points');
  // Regression: repeated redraws at Android pixel density must never grow canvas CSS height.
  const heights=await evaluate("['trend','pie','bars'].map(id=>document.getElementById(id).getBoundingClientRect().height)");
  await evaluate("for(let i=0;i<12;i++){lastChartKey='';charts();adjustCamera('trend','in');adjustCamera('pie','in');adjustCamera('bars','in');}");
@@ -40,6 +42,16 @@ const deadline=setTimeout(()=>{console.error('WebView test timed out');process.e
  assert.equal(await evaluate("document.getElementById('categoryBars').querySelector('.categoryHeading strong').textContent"),'Food');
  await evaluate("document.getElementById('txTag').value='tagged';renderTransactions()");
  assert.equal(await evaluate("document.getElementById('txList').querySelectorAll('.tx').length"),1);
+ // Temporal zoom changes bucket sizes and date range, never canvas geometry.
+ await evaluate("setTimeRange('year')");assert.equal(await evaluate("timeline.unit"),'month');
+ await evaluate("setTimeRange('day')");assert.equal(await evaluate("timeline.unit"),'hour');
+ await evaluate("adjustCamera('trend','out');adjustCamera('trend','out')");assert.equal(await evaluate("timeline.unit"),'day');
+ assert.deepEqual(await evaluate("['trend','pie','bars'].map(id=>document.getElementById(id).getBoundingClientRect().height)"),heights);
+ await evaluate("showPage('plans');document.getElementById('newPlan').click()");
+ assert.equal(await evaluate("document.getElementById('planFlexible').checked"),true);
+ assert.equal(await evaluate("document.getElementById('planDate').required"),false);
+ await evaluate("document.getElementById('planFlexible').checked=false;planTiming()");assert.equal(await evaluate("document.getElementById('planDate').required"),true);
+ await evaluate("document.getElementById('planDialog').close();showPage('overview')");
  await evaluate("Ledger.scanHistory()");await new Promise(resolve=>setTimeout(resolve,1200));
  assert.equal(await evaluate("document.getElementById('scanStats').textContent.includes('messages checked')"),true);
  assert.equal(await evaluate("document.getElementById('scan').disabled"),false);
