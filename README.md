@@ -4,7 +4,7 @@ Custom tracker for KVB, HDFC and India Post transaction alerts. Historical inbox
 
 ## Delivery status
 
-Source project completed. The pure-Java SMS parser and dashboard calculation tests pass. The Android SDK and Gradle are unavailable in the delivery environment, and their download endpoints could not be reached. **No APK was built or installation-tested.** Build and test on your Android phone before relying on the totals. The Java Android adapter has not been compiled against android.jar here.
+The Android APK is built by GitHub Actions, with parser/dashboard checks, Android SDK compilation and APK signature verification. The workflow also installs the APK on Android 10 and checks the actual WebView dashboard, charts and navigation. See the latest workflow result and its APK artifact in the repository's Actions tab. No genuine SMS data is included; bank-specific formats still need checking on your own phone.
 
 ## Build on Windows with Android Studio
 
@@ -13,7 +13,7 @@ Source project completed. The pure-Java SMS parser and dashboard calculation tes
 3. Use a compatible Gradle JDK (17 or newer supported by Android Gradle Plugin 8.7). In Gradle settings choose a local Gradle 8.9 distribution. This source project does not bundle a Gradle wrapper or distribution.
 4. Download Gradle 8.9 from the official Gradle distribution site if needed. With Gradle available on PATH, run `gradle :app:assembleDebug` from this folder. Android Studio may create `local.properties` with your SDK path automatically; otherwise set `ANDROID_HOME` to the Android SDK directory.
 5. The resulting file is `app/build/outputs/apk/debug/app-debug.apk`. Transfer it to your Android phone and install it, granting the installation source permission when Android prompts.
-6. If you maintain your own GitHub repository, the included manual GitHub Actions workflow is another build option. It has not been run here. Repository root must contain `settings.gradle`.
+6. If you maintain your own GitHub repository, the included manual GitHub Actions workflow is another build option. The included workflow builds the APK. Repository root must contain `settings.gradle`.
 
 ## First run
 
