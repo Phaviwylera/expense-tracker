@@ -7,7 +7,7 @@ const deadline=setTimeout(()=>{console.error('WebView test timed out');process.e
  assert(page,'Android WebView page must load');
  const ws=new WebSocket(page.webSocketDebuggerUrl);await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject;});
  let id=0;const pending=new Map();ws.onmessage=e=>{const r=JSON.parse(e.data);if(r.id&&pending.has(r.id)){pending.get(r.id)(r);pending.delete(r.id);}};
- async function evaluate(expression){const reply=await new Promise(resolve=>{const n=++id;pending.set(n,resolve);ws.send(JSON.stringify({id:n,method:'Runtime.evaluate',params:{expression,returnByValue:true,awaitPromise:true}}));});if(reply.result.exceptionDetails)throw new Error(JSON.stringify(reply.result.exceptionDetails));return reply.result.result.value;}
+ async function evaluate(expression){const reply=await new Promise(resolve=>{const n=++id;pending.set(n,resolve);setTimeout(()=>{if(pending.has(n)){console.error('Stalled evaluation:',expression);process.exit(1);}},8000).unref();ws.send(JSON.stringify({id:n,method:'Runtime.evaluate',params:{expression,returnByValue:true,awaitPromise:true}}));});if(reply.result.exceptionDetails)throw new Error(JSON.stringify(reply.result.exceptionDetails));return reply.result.result.value;}
  assert.equal(await evaluate("document.getElementById('expense').textContent.replace(/\\s/g,'')"),'₹0.00');
  assert.equal(await evaluate("document.getElementById('period').options.length>0"),true);
  const fixture={smsGranted:true,transactions:[{id:'ui-fixture-only',time:Date.now(),bank:'SBI',account:'TEST',amount:50000,direction:'debit',merchant:'UI fixture (not a bank entry)',category:'Food',status:'confirmed',raw:'Synthetic UI fixture, never persisted'}],plans:[]};
@@ -16,7 +16,8 @@ const deadline=setTimeout(()=>{console.error('WebView test timed out');process.e
  assert.equal(await evaluate("document.getElementById('expense').textContent.replace(/\\s/g,'')"),'₹500.00');
  assert.equal(await evaluate("document.getElementById('legend').children.length"),1);
  assert.equal(await evaluate("Array.from(document.getElementById('bank').options).some(o=>o.value==='SBI')"),true);
- const shot=await new Promise(resolve=>{const n=++id;pending.set(n,resolve);ws.send(JSON.stringify({id:n,method:'Page.captureScreenshot',params:{format:'png'}}));});fs.writeFileSync('smoke-output/premium-overview.png',Buffer.from(shot.result.data,'base64'));
+ console.log('WebView initial snapshot and totals verified.');
+ fs.writeFileSync('smoke-output/premium-overview.png',require('node:child_process').execFileSync('adb',['exec-out','screencap','-p']));
  assert.equal(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),true);
  await evaluate("edit(state.transactions[0])");
  assert.equal(await evaluate("document.getElementById('editBank').value"),'SBI');
