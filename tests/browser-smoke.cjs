@@ -21,6 +21,7 @@ const deadline=setTimeout(()=>{console.error('WebView test timed out');process.e
  await evaluate("document.getElementById('editDialog').close()");
  assert.equal(await evaluate("trendPoints.length>0"),true);
  await evaluate("document.getElementById('trendMode').value='cumulative';document.getElementById('trendMode').onchange()");
+ await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
  assert.equal(await evaluate("document.getElementById('trendSubtitle').textContent"),'Cumulative outflow · selected period');
  // Regression: repeated redraws at Android pixel density must never grow canvas CSS height.
  const heights=await evaluate("['trend','pie','bars'].map(id=>document.getElementById(id).getBoundingClientRect().height)");
