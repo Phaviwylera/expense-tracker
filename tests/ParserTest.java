@@ -67,5 +67,9 @@ public class ParserTest {
   check(in.pocketledger.app.BalanceParser.parse("VM-HDFCBK","Credit card XX1234 available credit balance Rs.20000",1)==null,"Credit limit is not deposit balance");
   check(in.pocketledger.app.BalanceParser.parse("VM-HDFCBK","Account XX1234 balance Rs.200; balance Rs.500",1)==null,"Ambiguous multiple balances rejected");
 
+  check(in.pocketledger.app.BalanceParser.parse("VM-HDFCBK","A/c XX1234 Avl bal: INR 2,951.18. Contact bank for help.",1).amount==295118,"SMS sentence punctuation cannot truncate reported balance");
+  check(in.pocketledger.app.BalanceParser.parse("VM-KVB","A/C XX1234 Available Balance - Rs.100.00.",1).amount==10000,"Balance with dash separator and sentence period");
+  check(in.pocketledger.app.BalanceParser.parse("VM-KVB","A/C XX1234 balance INR -100.00",1).amount==-10000,"Negative reported account balance retained");
+
  }
 }

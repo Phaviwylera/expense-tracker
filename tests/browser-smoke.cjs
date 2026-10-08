@@ -10,6 +10,7 @@ const deadline=setTimeout(()=>{console.error('WebView test timed out');process.e
  async function evaluate(expression){const reply=await new Promise(resolve=>{const n=++id;pending.set(n,resolve);setTimeout(()=>{if(pending.has(n)){console.error('Stalled evaluation:',expression);process.exit(1);}},8000).unref();ws.send(JSON.stringify({id:n,method:'Runtime.evaluate',params:{expression,returnByValue:true,awaitPromise:true}}));});if(reply.result.exceptionDetails)throw new Error(JSON.stringify(reply.result.exceptionDetails));return reply.result.result.value;}
  assert.equal(await evaluate("document.getElementById('expense').textContent.replace(/\\s/g,'')"),'₹0.00');
  assert.equal(await evaluate("document.getElementById('period').options.length>0"),true);
+ await evaluate('clearInterval(liveRefreshTimer)'); // Keep isolated UI fixtures separate from live database refreshes during assertions.
  const fixture={smsGranted:true,transactions:[{id:'ui-fixture-only',time:Date.now(),bank:'SBI',account:'TEST',amount:50000,direction:'debit',merchant:'UI fixture (not a bank entry)',category:'Food',status:'confirmed',raw:'Synthetic UI fixture, never persisted'}],plans:[]};
  await evaluate(`window.nativeEvent('snapshot',${JSON.stringify(JSON.stringify(fixture))})`);
  await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
