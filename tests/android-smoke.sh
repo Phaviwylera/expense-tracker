@@ -1,9 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 mkdir -p smoke-output
-adb install -r -g app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb logcat -c
 adb shell am start -W -n in.pocketledger.app/.MainActivity | tee smoke-output/launch.txt
+sleep 4
+adb shell uiautomator dump /sdcard/permission.xml
+adb pull /sdcard/permission.xml smoke-output/permission.xml
+python3 - <<'PYTEST'
+from pathlib import Path
+s=Path('smoke-output/permission.xml').read_text()
+assert 'permissioncontroller' in s and ('SMS' in s or 'sms' in s), 'First-launch SMS permission prompt must be visible'
+print('First-launch SMS permission prompt verified.')
+PYTEST
+adb exec-out screencap -p > smoke-output/permission-prompt.png
+adb shell pm grant in.pocketledger.app android.permission.READ_SMS
+adb shell pm grant in.pocketledger.app android.permission.RECEIVE_SMS
+adb shell am force-stop in.pocketledger.app
+adb shell am start -W -n in.pocketledger.app/.MainActivity
 sleep 8
 app_pid=$(adb shell pidof in.pocketledger.app | tr -d '\r')
 echo "$app_pid" | tee smoke-output/pid.txt
