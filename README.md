@@ -99,3 +99,11 @@ Database upgrade cleans previously imported explicit merchant/promotion false ma
 ### Version 1.5: account labels are not banking proof
 
 Order reminders and reward promotions are rejected. Unfamiliar senders require an explicit financial movement plus a masked account or banking context; received messages require a transfer rail and reference. An A/C label and amount alone cannot import a message. Upgrading schema 4 removes previous review entries failing these rules, while preserving manual tags on retained transactions.
+
+### Version 1.6: balances, flexible plans and time-scale charts
+
+Latest reported deposit balances are extracted separately from transaction amounts and kept per recognised bank/account, with SMS timestamp. Scan history for older account balances; live alerts update newer balances automatically. These are SMS-reported values, not a bank connection or guaranteed current balance. Credit limits, merchant wallets and ambiguous balances are excluded.
+
+Plans accept description, amount and month, with an optional specific day. Month-only plans reserve money in the selected month without a reminder. Dated plans use one local morning notification; completed plans leave the forecast. Reminders are restored after reboot/time changes. Enable notifications in Plans; delivery time can vary with Android battery settings.
+
+The redesigned light interface uses restrained blue controls, large headings and a floating navigation bar. Stock-style chart controls and pinch gestures change the date window and aggregate years, months, days or hours; the chart height stays fixed. The pie and category charts keep their full geometry.
