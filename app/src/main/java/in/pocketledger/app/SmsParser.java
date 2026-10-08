@@ -68,10 +68,29 @@ public final class SmsParser {
  private static String identifySender(String code){String bank=SENDERS.get(code);return bank!=null?bank:SENDERS.get(code.replaceFirst("[0-9]{1,3}$",""));}
  private static String identifyBody(String body){for(int i=0;i<BANKS.length;i++)if(BANK_NAMES.get(i).matcher(body).find())return BANKS[i][0];return null;}
  private static final Pattern MONEY_PATTERN=Pattern.compile(MONEY,Pattern.CASE_INSENSITIVE);
+ private static final Pattern PROMOTIONAL=Pattern.compile("\\b(?:unsubscribe|reminder\\s*to\\s*re\\s*order|remindertoreorder|reorder|shophealthy|shophealthyin|coupon|promo\\s*code|offer\\s*code|discount\\s*code|claim\\s*(?:now|reward)|redeem\\s*(?:now|reward|points))\\b",Pattern.CASE_INSENSITIVE);
+ private static final Pattern ACCOUNT_NUMBER=Pattern.compile("(?:a/c|acct|account|card)\\s*(?:(?:no\\.?|number|ending|ending\\s+with|:)[ \\t]*)?(?:[xX*]+[0-9]{2,}|[0-9]{2,20}\\b)",Pattern.CASE_INSENSITIVE);
+ private static final Pattern BANK_MARKER=Pattern.compile("\\b(?:bank|neft|imps|rtgs|upi|utr|rrn|atm|pos)\\b|a/c|\\bacct\\b",Pattern.CASE_INSENSITIVE);
+ /** Reject non-bank alerts before extracting a value, and reuse for cleaning historical false matches. */
+ public static String rejectionReason(String sender,String body){
+  if(sender==null||body==null)return "Missing SMS source";String code=senderCode(sender);boolean known=identifySender(code)!=null;
+  boolean account=ACCOUNT_NUMBER.matcher(body).find();
+  if(PROMOTIONAL.matcher(body).find()&&!(known&&account&&Pattern.compile("\\b(?:debited|credited|withdrawn|spent)\\b",Pattern.CASE_INSENSITIVE).matcher(body).find()))return "Promotion, coupon or reorder reminder";
+  boolean reward=Pattern.compile("(?:gift\\s*card|swiggy\\s+money|reward\\s+points|loyalty\\s+points|store\\s+credit)",Pattern.CASE_INSENSITIVE).matcher(body).find();
+  if(reward&&(!known||!account))return "Merchant wallet, gift-card or loyalty reward; not a bank transaction";
+  if(!known){
+   if(!categorise(code).equals("Uncategorised")||code.matches("(?i)(?:SHPHLT|SHOPHLT|SHOPHEALTHY|AMAZON|FLPKRT|SWIGGY|ZOMATO)[0-9]*"))return "Merchant notification; not a bank alert";
+   if(!account)return "No bank account or card transaction evidence";
+   boolean masked=Pattern.compile("[xX*]+[0-9]{2,}").matcher(body).find();
+   if(!masked&&!BANK_MARKER.matcher(body).find()&&identifyBody(body)==null&&!code.matches(".*(?:BNK|BANK).*"))return "Unfamiliar source without banking context";
+  }
+  return "";
+ }
  public static Entry parse(String sender,String body,long time) {
   if(sender==null||body==null)return null;
   String b=body.toLowerCase(Locale.ROOT), code=senderCode(sender);
   if(!MONEY_PATTERN.matcher(body).find()||(!DEBIT.matcher(body).find()&&!CREDIT.matcher(body).find()))return null;
+  if(!rejectionReason(sender,body).isEmpty())return null;
   if(b.matches("(?s).*\\b(otp|one.time password|verification code|available offer|pre.approved|minimum amount due|total amount due|payment due|due date|collect request|request to pay)\\b.*"))return null;
   String bank=identifySender(code);boolean knownSender=bank!=null;
 

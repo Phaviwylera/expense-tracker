@@ -42,5 +42,16 @@ public class ParserTest {
   check(!MerchantRules.sameBusiness("John","John Lewis"),"Ambiguous online identity rejected");
   check(MerchantRules.fromPlaceType("indian_restaurant").equals("Food"),"Google restaurant type maps Food");
 
+  check(SmsParser.parse("VM-SWIGGY","Your Swiggy Money is credited with a Gift card of ₹200.00 for Marriott cashback. Total balance is ₹200.00.",1)==null,"Swiggy gift card cashback is not a bank transaction");
+  check(SmsParser.parse("VM-SHPHLT","ShopHealthyinRemindertoReOrder Your account (9999999999) Time: 24/09 10:01 Fare at received Rs.3018 Balance Rs.5929. Unsubscribe View Now bit.ly/test",1)==null,"ShopHealthy reorder promotion excluded");
+  check(SmsParser.parse("VM-HDFCBK","INR 200 credited to account XX1234 as cashback on 24 Sep.",1)!=null,"Actual bank cashback credit retained");
+  var actual=SmsParser.parse("VM-SBIUPI","INR 200 debited from account XX1234 to SWIGGY on 24 Sep.",1);check(actual!=null&&actual.category.equals("Food")&&actual.direction.equals("debit"),"Actual Swiggy bank payment remains Food expense");
+  check(SmsParser.parse("VM-STORE","Your account 1234 received Rs.3018 Balance Rs.5929",1)==null,"Generic merchant account and amount are insufficient");
+  check(SmsParser.parse("VM-HDFCBK","Buy gift cards! Get Rs.200 coupon credited to your rewards account.",1)==null,"Bank-sender coupon offer excluded");
+
+  check(SmsParser.parse("VM-HDFCBK","INR 200 credited to account XX1234. To stop marketing messages unsubscribe.",1)!=null,"Genuine bank credit with marketing footer retained");
+
+  var full=SmsParser.parse("VM-NEWBNK","Account 123456789012 credited INR 500 via NEFT Ref 123456789012.",1);check(full!=null&&full.status.equals("review"),"Unlisted bank full account number plus NEFT retained for review");
+
  }
 }
