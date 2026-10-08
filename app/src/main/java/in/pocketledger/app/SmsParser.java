@@ -112,7 +112,9 @@ public final class SmsParser {
  }
  private static boolean matches(String merchant,String words){return Pattern.compile("(?<![a-z])(?:"+words+")(?![a-z])").matcher(merchant.toLowerCase(Locale.ROOT).replaceAll("[._@/-]"," ")).find();}
  public static String categorise(String merchant){
-  if(matches(merchant,"swiggy|zomato|restaurant|cafe|bakery|dominos|domino's|pizza hut|mcdonalds|kfc|burger king|starbucks"))return "Food";
+  if(merchant==null)return "Uncategorised";
+  if(matches(merchant,"(?:swiggy)?instamart|swiggy instamart"))return "Groceries";
+  if(matches(merchant,"swiggy(?:upi|food|online|payments)?|zomato|restaurant|cafe|bakery|a2b|adyar ananda bhavan|adyar anandha bhavan|saravana bhavan|sangeetha|dominos|domino's|pizza hut|mcdonalds|kfc|burger king|starbucks"))return "Food";
   if(matches(merchant,"uber|ola|rapido|irctc|metro|railway|redbus|makemytrip|goibibo|indigo|air india|hotel|resort"))return "Travel";
   if(matches(merchant,"bigbasket|blinkit|zepto|grocery|groceries|supermarket|dmart|d mart"))return "Groceries";
   if(matches(merchant,"amazon|flipkart|myntra|ajio|nykaa|meesho"))return "Shopping";

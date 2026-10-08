@@ -35,3 +35,12 @@ if errors:
  print('\n'.join(errors));raise SystemExit('Android or dashboard initialization failed')
 print('No Android crashes or JavaScript initialization errors.')
 PY
+
+adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb shell am instrument -w in.pocketledger.app.test/in.pocketledger.app.LedgerInstrumentation | tee smoke-output/native-db-tests.txt
+python3 - <<'PYTEST'
+from pathlib import Path
+text=Path('smoke-output/native-db-tests.txt').read_text()
+assert 'PASS isolated native DB' in text and 'FAIL' not in text, text
+print('Native database regression tests passed in isolated test storage.')
+PYTEST

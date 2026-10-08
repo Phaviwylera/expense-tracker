@@ -1,3 +1,4 @@
+import in.pocketledger.app.MerchantRules;
 import in.pocketledger.app.SmsParser;
 public class ParserTest {
  static void check(boolean ok,String name){if(!ok)throw new AssertionError(name);System.out.println("PASS "+name);}
@@ -33,6 +34,13 @@ public class ParserTest {
   check(SmsParser.categorise("SWIGGY.IN").equals("Food"),"Merchant punctuation recognised");
 
   var info=SmsParser.parse("VM-HDFCBK","INR 450 debited from A/c XX1234. Info: UPI/BLINKIT/123456789012",1);check(info!=null&&info.merchant.equals("BLINKIT")&&info.category.equals("Groceries"),"UPI Info merchant extraction");
+
+  check(SmsParser.categorise("SWIGGYUPI").equals("Food"),"Compact Swiggy UPI descriptor");
+  check(SmsParser.categorise("SWIGGY123@paytm").equals("Food"),"Swiggy numbered VPA");
+  check(SmsParser.categorise("swiggyinstamart").equals("Groceries"),"Swiggy Instamart is groceries");
+  check(MerchantRules.sameBusiness("LENSKART","Lenskart"),"Online identity match ignores case");
+  check(!MerchantRules.sameBusiness("John","John Lewis"),"Ambiguous online identity rejected");
+  check(MerchantRules.fromPlaceType("indian_restaurant").equals("Food"),"Google restaurant type maps Food");
 
  }
 }

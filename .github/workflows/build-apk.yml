@@ -29,10 +29,10 @@ jobs:
           node --check app/src/main/assets/app.js
           node tests/ui-test.cjs
           mkdir -p /tmp/pocket-tests
-          javac -d /tmp/pocket-tests app/src/main/java/in/pocketledger/app/SmsParser.java tests/ParserTest.java
+          javac -d /tmp/pocket-tests app/src/main/java/in/pocketledger/app/SmsParser.java app/src/main/java/in/pocketledger/app/MerchantRules.java tests/ParserTest.java
           java -cp /tmp/pocket-tests ParserTest
       - name: Compile APK
-        run: gradle :app:assembleDebug --stacktrace
+        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
       - name: Verify APK signature
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
