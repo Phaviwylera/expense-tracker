@@ -10,11 +10,15 @@ const deadline=setTimeout(()=>{console.error('WebView test timed out');process.e
  async function evaluate(expression){const reply=await new Promise(resolve=>{const n=++id;pending.set(n,resolve);ws.send(JSON.stringify({id:n,method:'Runtime.evaluate',params:{expression,returnByValue:true,awaitPromise:true}}));});if(reply.result.exceptionDetails)throw new Error(JSON.stringify(reply.result.exceptionDetails));return reply.result.result.value;}
  assert.equal(await evaluate("document.getElementById('expense').textContent.replace(/\\s/g,'')"),'₹0.00');
  assert.equal(await evaluate("document.getElementById('period').options.length>0"),true);
- const fixture={smsGranted:true,transactions:[{id:'ui-fixture-only',time:Date.now(),bank:'HDFC',account:'TEST',amount:50000,direction:'debit',merchant:'UI fixture (not a bank entry)',category:'Food',status:'confirmed',raw:'Synthetic UI fixture, never persisted'}],plans:[]};
+ const fixture={smsGranted:true,transactions:[{id:'ui-fixture-only',time:Date.now(),bank:'SBI',account:'TEST',amount:50000,direction:'debit',merchant:'UI fixture (not a bank entry)',category:'Food',status:'confirmed',raw:'Synthetic UI fixture, never persisted'}],plans:[]};
  await evaluate(`window.nativeEvent('snapshot',${JSON.stringify(JSON.stringify(fixture))})`);
  await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
  assert.equal(await evaluate("document.getElementById('expense').textContent.replace(/\\s/g,'')"),'₹500.00');
  assert.equal(await evaluate("document.getElementById('legend').children.length"),1);
+ assert.equal(await evaluate("Array.from(document.getElementById('bank').options).some(o=>o.value==='SBI')"),true);
+ await evaluate("edit(state.transactions[0])");
+ assert.equal(await evaluate("document.getElementById('editBank').value"),'SBI');
+ await evaluate("document.getElementById('editDialog').close()");
  assert.equal(await evaluate("trendPoints.length>0"),true);
  await evaluate("document.getElementById('trendMode').value='cumulative';document.getElementById('trendMode').onchange()");
  assert.equal(await evaluate("document.getElementById('trendSubtitle').textContent"),'Cumulative outflow · selected period');
