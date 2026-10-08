@@ -32,5 +32,7 @@ public class ParserTest {
   check(SmsParser.categorise("TAJ HOTEL").equals("Travel"),"Hotel is travel rather than food");
   check(SmsParser.categorise("SWIGGY.IN").equals("Food"),"Merchant punctuation recognised");
 
+  var info=SmsParser.parse("VM-HDFCBK","INR 450 debited from A/c XX1234. Info: UPI/BLINKIT/123456789012",1);check(info!=null&&info.merchant.equals("BLINKIT")&&info.category.equals("Groceries"),"UPI Info merchant extraction");
+
  }
 }

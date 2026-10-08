@@ -62,18 +62,24 @@ public final class SmsParser {
   {"Slice","SLICE,SLICEB","Slice Bank"}
  };
  private static String senderCode(String sender){return sender.toUpperCase(Locale.ROOT).replaceFirst("^[A-Z]{2}-", "").replaceFirst("-[STPG]$", "").trim();}
- private static String identifySender(String code){for(String[] bank:BANKS)for(String alias:bank[1].toUpperCase(Locale.ROOT).split(","))if(code.equals(alias)||code.matches(Pattern.quote(alias)+"[0-9]{1,3}"))return bank[0];return null;}
- private static String identifyBody(String body){for(String[] bank:BANKS)for(String name:bank[2].split(","))if(Pattern.compile("(?<![A-Za-z])"+Pattern.quote(name)+"(?![A-Za-z])",Pattern.CASE_INSENSITIVE).matcher(body).find())return bank[0];return null;}
+ private static final Map<String,String> SENDERS=new HashMap<>();
+ private static final List<Pattern> BANK_NAMES=new ArrayList<>();
+ static{for(String[] bank:BANKS){for(String alias:bank[1].toUpperCase(Locale.ROOT).split(","))SENDERS.put(alias,bank[0]);StringJoiner names=new StringJoiner("|");for(String name:bank[2].split(","))names.add(Pattern.quote(name));BANK_NAMES.add(Pattern.compile("(?<![A-Za-z])(?:"+names+")(?![A-Za-z])",Pattern.CASE_INSENSITIVE));}}
+ private static String identifySender(String code){String bank=SENDERS.get(code);return bank!=null?bank:SENDERS.get(code.replaceFirst("[0-9]{1,3}$",""));}
+ private static String identifyBody(String body){for(int i=0;i<BANKS.length;i++)if(BANK_NAMES.get(i).matcher(body).find())return BANKS[i][0];return null;}
+ private static final Pattern MONEY_PATTERN=Pattern.compile(MONEY,Pattern.CASE_INSENSITIVE);
  public static Entry parse(String sender,String body,long time) {
   if(sender==null||body==null)return null;
   String b=body.toLowerCase(Locale.ROOT), code=senderCode(sender);
+  if(!MONEY_PATTERN.matcher(body).find()||(!DEBIT.matcher(body).find()&&!CREDIT.matcher(body).find()))return null;
   if(b.matches("(?s).*\\b(otp|one.time password|verification code|available offer|pre.approved|minimum amount due|total amount due|payment due|due date|collect request|request to pay)\\b.*"))return null;
   String bank=identifySender(code);boolean knownSender=bank!=null;
-  if(bank==null)bank=identifyBody(body);
+
   // Do not interpret messages from personal phone numbers as bank alerts.
   if(sender.replaceAll("[+\\s-]", "").matches("[0-9]{9,}"))return null;
   boolean accountContext=Pattern.compile("(?:a/c|acct|account|card)\\b",Pattern.CASE_INSENSITIVE).matcher(body).find();
   if(!knownSender&&!accountContext)return null;
+  if(bank==null)bank=identifyBody(body);
   if(bank==null)bank="Other bank · "+code;
   Matcher debit=DEBIT.matcher(body),credit=CREDIT.matcher(body);
   boolean d=debit.find(),c=credit.find(); if(!d&&!c)return null;
@@ -95,6 +101,10 @@ public final class SmsParser {
    Matcher merchant=Pattern.compile("\\b"+preposition+"\\s+([A-Za-z][A-Za-z0-9@._ /&-]{1,70}?)(?=\\s+(?:on|via|using|ref|UPI|Avl|bal|a/c|account|Info|txn|transaction)\\b|[.;]|$)",Pattern.CASE_INSENSITIVE).matcher(body);
    while(merchant.find()){String candidate=merchant.group(1).trim();if(!candidate.matches("(?i)(?:your\\s+)?(?:a/c|account|acct|card)\\b.*")&&!candidate.matches("(?i)[x*0-9 /-]+")){e.merchant=candidate;break;}}
    if(!e.merchant.equals("Unknown"))break;
+  }
+  if(e.merchant.equals("Unknown")){
+   Matcher info=Pattern.compile("\\bInfo\\s*:?\\s*(?:UPI[/-])?([A-Za-z][A-Za-z0-9 .&@_]{2,60})(?=[/-]|$)",Pattern.CASE_INSENSITIVE).matcher(body);
+   if(info.find())e.merchant=info.group(1).trim();
   }
   Matcher ref=Pattern.compile("(?:UPI(?:\\s+Ref)?|UTR|RRN|Ref(?:erence)?(?:\\s+No\\.?)?)[\\s:#.-]*(\\d{8,24})",Pattern.CASE_INSENSITIVE).matcher(body);if(ref.find())e.reference=ref.group(1);
   e.category=categorise(e.merchant);

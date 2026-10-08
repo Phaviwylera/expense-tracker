@@ -78,3 +78,8 @@ Unfamiliar sources with explicit INR transactions and account/card context are r
 
 ### Automatic category tagging
 Merchant/place names in each SMS are matched against conservative offline rules for Food, Travel, Groceries, Shopping, Health, Bills and Entertainment. Unclear names stay **Untagged**; personal names and generic UPI IDs cannot reveal what was purchased. In Transactions, choose Untagged or Tagged. Saving a category immediately moves that entry into Tagged. Optionally remember the merchant to tag matching existing and future transactions. Bank verification status stays separate from category tagging.
+
+### Version 1.2 fixes
+First launch requests SMS access; granting it begins historical scanning. History processes newest messages first in short database batches with checked/total counts, percent progress, live imported totals, and a Stop control. Tagging and refresh can run between batches. Database indexes and an early SMS prefilter reduce repeated scanning work. Exact re-imports preserve edits.
+
+Charts retain fixed CSS heights independent of screen pixel density. Zoom, horizontal pan and reset stay inside each chart viewport; two-finger pinch is supported. Unchanged snapshots do not rebuild charts or rows. Category spending rows show amount, percentage of confirmed spending and proportional fill, including Untagged. Tag edits wait for native save acknowledgement and immediately update both tagging lists and category graphs. Permission, pixel-density/zoom, category movement and scan completion regressions are covered in CI on a real Android WebView; no user financial records are invented.
