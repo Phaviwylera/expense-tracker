@@ -1,6 +1,6 @@
 # Pocket Ledger — Android SMS expense tracker
 
-Bank-independent INR transaction SMS tracker. Recognises common sender aliases across Indian banks and imports unfamiliar account/card transaction alerts for review. Historical inbox import plus new-SMS capture. All application assets are bundled; the app has no Internet permission and sends no SMS data to a server.
+Bank-independent INR transaction SMS tracker. Recognises common sender aliases across Indian banks and imports unfamiliar account/card transaction alerts for review. Historical inbox import plus new-SMS capture. All application assets are bundled; the app has Internet access only for merchant lookup and sends no SMS data to a server.
 
 ## Delivery status
 
@@ -59,7 +59,7 @@ From this project folder:
 
 - `node --check app/src/main/assets/app.js`
 - `node tests/ui-test.cjs` — verifies actual dashboard logic with a minimal DOM adapter: totals, bank filters, review filtering, future shortfall/horizon and empty-state behavior. This is not a browser rendering test.
-- `javac -d /tmp/pocket-tests app/src/main/java/in/pocketledger/app/SmsParser.java tests/ParserTest.java`
+- `javac -d /tmp/pocket-tests app/src/main/java/in/pocketledger/app/SmsParser.java app/src/main/java/in/pocketledger/app/MerchantRules.java tests/ParserTest.java`
 - `java -cp /tmp/pocket-tests ParserTest` — Parser checks against synthetic bank message fixtures, not the user's actual SMS.
 
 If `javac` is missing but Java includes the compiler module, use `java -m jdk.compiler/com.sun.tools.javac.Main` in place of `javac`.
@@ -83,3 +83,10 @@ Merchant/place names in each SMS are matched against conservative offline rules 
 First launch requests SMS access; granting it begins historical scanning. History processes newest messages first in short database batches with checked/total counts, percent progress, live imported totals, and a Stop control. Tagging and refresh can run between batches. Database indexes and an early SMS prefilter reduce repeated scanning work. Exact re-imports preserve edits.
 
 Charts retain fixed CSS heights independent of screen pixel density. Zoom, horizontal pan and reset stay inside each chart viewport; two-finger pinch is supported. Unchanged snapshots do not rebuild charts or rows. Category spending rows show amount, percentage of confirmed spending and proportional fill, including Untagged. Tag edits wait for native save acknowledgement and immediately update both tagging lists and category graphs. Permission, pixel-density/zoom, category movement and scan completion regressions are covered in CI on a real Android WebView; no user financial records are invented.
+
+### Version 1.3: categories and Google merchant lookup
+Existing recognised Untagged rows repair on database upgrade, rescan, or the Settings retag button. Swiggy compact UPI descriptors map to Food; Instamart maps to Groceries. Manual tags, including an explicit Untagged choice, are preserved. Activity category spending charts use all confirmed expenses for the period/bank, independently of search/tag list filters. Tagged entries under Review remain outside confirmed spending with an explanation.
+
+After pausing a search for 900ms, up to three matching untagged merchant names are checked using Google Maps Places Text Search (New), when your own enabled, billing-backed API key is configured in Settings. No key is included in the APK. Only cleaned merchant names are sent; SMS bodies, amounts and account details stay on the phone. Exact business names and supported primary business types must agree on a category. Ambiguous results or request failures stay Untagged. Without a Google key, built-in merchant rules still work; online categorisation is inactive. Requests are throttled for a minute per merchant. User edits take precedence over asynchronous results.
+
+CI also installs a dedicated native test APK. Its temporary ledger-regression-only.db checks migration of old Untagged Swiggy entries, persisted manual category changes and protection from automatic retagging. Synthetic rows never enter the production ledger or SMS provider. Google matching rules are tested with type fixtures; live Google requests require your key and have not been verified with a paid key.

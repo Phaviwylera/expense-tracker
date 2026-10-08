@@ -36,6 +36,7 @@ const deadline=setTimeout(()=>{console.error('WebView test timed out');process.e
  assert.equal(await evaluate("document.getElementById('txList').querySelectorAll('.tx').length"),1);
  fixture.transactions[0].category='Food';await evaluate(`window.nativeEvent('snapshot',${JSON.stringify(JSON.stringify(fixture))})`);
  assert.equal(await evaluate("document.getElementById('txList').querySelectorAll('.tx').length"),0);
+ assert.equal(await evaluate("document.getElementById('categoryBars').querySelector('.categoryHeading strong').textContent"),'Food');
  await evaluate("document.getElementById('txTag').value='tagged';renderTransactions()");
  assert.equal(await evaluate("document.getElementById('txList').querySelectorAll('.tx').length"),1);
  await evaluate("Ledger.scanHistory()");await new Promise(resolve=>setTimeout(resolve,1200));
